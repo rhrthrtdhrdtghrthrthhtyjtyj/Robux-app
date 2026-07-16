@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Robux Калькулятор</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700;900&family=Rubik:wght@400;500;600&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0E1013;
+    --card:#171A20;
+    --card2:#1E222A;
+    --line:#2A2F39;
+    --text:#EDEFF3;
+    --muted:#8B93A1;
+    --gold:#F5C542;
+    --green:#4ADE80;
+    --radius:18px;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%}
+  body{
+    background:var(--bg);
+    color:var(--text);
+    font-family:'Rubik',sans-serif;
+    font-size:15px;
+    padding:16px 16px 96px;
+    max-width:480px;
+    margin:0 auto;
+  }
+
+  /* ── Шапка ─────────────────────────── */
+  header{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px}
+  .logo{font-family:'Unbounded',sans-serif;font-weight:900;font-size:17px;letter-spacing:.5px}
+  .logo span{color:var(--gold)}
+  .rate-chip{
+    display:flex;align-items:center;gap:6px;
+    background:var(--card);border:1px solid var(--line);
+    border-radius:99px;padding:6px 12px;font-size:13px;color:var(--muted);
+    cursor:pointer;transition:border-color .2s;
+  }
+  .rate-chip:active{border-color:var(--gold)}
+  .rate-chip b{color:var(--gold);font-family:'JetBrains Mono',monospace;font-weight:700}
+
+  /* ── Конвертер ─────────────────────── */
+  .converter{position:relative;margin-bottom:14px}
+  .conv-panel{
+    background:var(--card);border:1px solid var(--line);
+    border-radius:var(--radius);padding:16px 18px;
+  }
+  .conv-panel.focus{border-color:var(--gold)}
+  .conv-panel + .conv-panel{margin-top:10px}
+  .conv-label{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;display:flex;justify-content:space-between}
+  .conv-row{display:flex;align-items:center;gap:10px}
+  .conv-row input{
+    flex:1;background:transparent;border:none;outline:none;
+    color:var(--text);font-family:'JetBrains Mono',monospace;
+    font-size:32px;font-weight:700;width:100%;min-width:0;
+  }
+  .conv-row input::placeholder{color:#3A4048}
+  .currency{
+    font-family:'Unbounded',sans-serif;font-weight:700;font-size:15px;
+    color:var(--muted);flex-shrink:0;
+  }
+  .currency.gold{color:var(--gold)}
+
+  .swap-btn{
+    position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
+    width:44px;height:44px;border-radius:50%;
+    background:var(--gold);border:4px solid var(--bg);
+    display:flex;align-items:center;justify-content:center;
+    cursor:pointer;z-index:2;transition:transform .35s cubic-bezier(.4,0,.2,1);
+    box-shadow:0 4px 16px rgba(245,197,66,.35);
+  }
+  .swap-btn svg{width:20px;height:20px;stroke:#0E1013;stroke-width:2.5;fill:none}
+  .swap-btn.spun{transform:translate(-50%,-50%) rotate(180deg)}
+  @media (prefers-reduced-motion: reduce){.swap-btn{transition:none}}
+
+  /* ── Быстрые пакеты ────────────────── */
+  .section-title{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin:20px 0 10px}
+  .chips{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+  .chip{
+    background:var(--card);border:1px solid var(--line);border-radius:12px;
+    padding:10px 4px;text-align:center;cursor:pointer;transition:all .15s;
+  }
+  .chip:active{transform:scale(.95)}
+  .chip.active{border-color:var(--gold);background:var(--card2)}
+  .chip .r{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:15px;color:var(--gold)}
+  .chip .p{font-size:11px;color:var(--muted);margin-top:2px}
+
+  /* ── Итог ──────────────────────────── */
+  .summary{
+    margin-top:20px;background:var(--card);border:1px solid var(--line);
+    border-radius:var(--radius);padding:16px 18px;
+  }
+  .sum-row{display:flex;justify-content:space-between;padding:5px 0;font-size:14px;color:var(--muted)}
+  .sum-row.total{
+    border-top:1px solid var(--line);margin-top:8px;padding-top:12px;
+    color:var(--text);font-weight:600;font-size:16px;
+  }
+  .sum-row .val{font-family:'JetBrains Mono',monospace;font-weight:700}
+  .sum-row.total .val{color:var(--gold);font-size:18px}
+
+  /* ── Кнопка (fallback вне Telegram) ── */
+  .buy-btn{
+    position:fixed;bottom:16px;left:16px;right:16px;max-width:448px;margin:0 auto;
+    background:var(--gold);color:#0E1013;border:none;border-radius:16px;
+    font-family:'Unbounded',sans-serif;font-weight:700;font-size:15px;
+    padding:16px;cursor:pointer;transition:transform .15s;
+  }
+  .buy-btn:active{transform:scale(.98)}
+  .buy-btn:disabled{background:var(--line);color:var(--muted)}
+
+  /* ── Настройка курса (модалка) ─────── */
+  .modal{
+    display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);
+    z-index:10;align-items:flex-end;justify-content:center;
+  }
+  .modal.show{display:flex}
+  .modal-card{
+    background:var(--card);border-radius:20px 20px 0 0;padding:24px 20px 32px;
+    width:100%;max-width:480px;
+  }
+  .modal-card h3{font-family:'Unbounded',sans-serif;font-size:15px;margin-bottom:16px}
+  .modal-card input{
+    width:100%;background:var(--card2);border:1px solid var(--line);border-radius:12px;
+    padding:14px 16px;color:var(--text);font-family:'JetBrains Mono',monospace;
+    font-size:18px;font-weight:700;outline:none;
+  }
+  .modal-card input:focus{border-color:var(--gold)}
+  .modal-card .hint{font-size:12px;color:var(--muted);margin:8px 0 16px}
+  .modal-card button{
+    width:100%;background:var(--gold);border:none;border-radius:12px;
+    padding:14px;font-family:'Unbounded',sans-serif;font-weight:700;
+    font-size:14px;color:#0E1013;cursor:pointer;
+  }
+
+  .toast{
+    position:fixed;top:20px;left:50%;transform:translateX(-50%) translateY(-80px);
+    background:var(--card2);border:1px solid var(--green);color:var(--green);
+    border-radius:12px;padding:10px 20px;font-size:14px;z-index:20;
+    transition:transform .3s;pointer-events:none;
+  }
+  .toast.show{transform:translateX(-50%) translateY(0)}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">R$ <span>SHOP</span></div>
+  <div class="rate-chip" id="rateChip">1 ₽ = <b id="rateView">2</b> R$</div>
+</header>
+
+<!-- Конвертер -->
+<div class="converter">
+  <div class="conv-panel" id="panelRub">
+    <div class="conv-label"><span>Ты платишь</span></div>
+    <div class="conv-row">
+      <input type="number" inputmode="decimal" id="inpRub" placeholder="0" min="0">
+      <div class="currency">₽ RUB</div>
+    </div>
+  </div>
+
+  <div class="swap-btn" id="swapBtn" title="Поменять направление">
+    <svg viewBox="0 0 24 24"><path d="M7 4v13M7 4L3.5 7.5M7 4l3.5 3.5M17 20V7M17 20l3.5-3.5M17 20l-3.5-3.5"/></svg>
+  </div>
+
+  <div class="conv-panel" id="panelRbx">
+    <div class="conv-label"><span>Ты получаешь</span></div>
+    <div class="conv-row">
+      <input type="number" inputmode="numeric" id="inpRbx" placeholder="0" min="0">
+      <div class="currency gold">R$ ROBUX</div>
+    </div>
+  </div>
+</div>
+
+<!-- Быстрые пакеты -->
+<div class="section-title">Популярные пакеты</div>
+<div class="chips" id="chips"></div>
+
+<!-- Итог -->
+<div class="summary">
+  <div class="sum-row"><span>Робуксов</span><span class="val" id="sumRbx">0 R$</span></div>
+  <div class="sum-row"><span>Курс</span><span class="val" id="sumRate">1 ₽ = 2 R$</span></div>
+  <div class="sum-row total"><span>К оплате</span><span class="val" id="sumTotal">0 ₽</span></div>
+</div>
+
+<button class="buy-btn" id="buyBtn" disabled>Оформить заказ</button>
+
+<!-- Модалка курса -->
+<div class="modal" id="rateModal">
+  <div class="modal-card">
+    <h3>Курс продажи</h3>
+    <input type="number" step="0.1" min="0.1" id="rateInput" value="2">
+    <div class="hint">Сколько робуксов даёшь за 1 рубль. Постоянный курс задаётся в CONFIG в коде.</div>
+    <button id="rateSave">Сохранить</button>
+  </div>
+</div>
+
+<div class="toast" id="toast">Заказ отправлен ✓</div>
+
+<script>
+/* ═══ НАСТРОЙКИ — поменяй под себя ═══ */
+const CONFIG = {
+  robuxPerRub: 2,      // сколько робуксов за 1 рубль
+  minRub: 50,          // минимальная сумма заказа в рублях
+  packs: [100, 400, 800, 1700]  // быстрые пакеты в R$
+};
+/* ════════════════════════════════════ */
+
+let rpr = CONFIG.robuxPerRub;
+
+const tg = window.Telegram && window.Telegram.WebApp;
+const $ = id => document.getElementById(id);
+const inpRub = $('inpRub'), inpRbx = $('inpRbx');
+
+// ── Telegram init ──
+if (tg && tg.initData !== undefined) {
+  tg.ready();
+  tg.expand();
+  try { tg.setHeaderColor('#0E1013'); tg.setBackgroundColor('#0E1013'); } catch(e){}
+  tg.MainButton.setParams({ text: 'ОФОРМИТЬ ЗАКАЗ', color: '#F5C542', text_color: '#0E1013' });
+  tg.MainButton.onClick(sendOrder);
+  $('buyBtn').style.display = 'none'; // в Telegram используем MainButton
+}
+
+// ── Расчёты ──
+const fmt = n => new Intl.NumberFormat('ru-RU').format(n);
+
+function fromRub() {
+  const rub = parseFloat(inpRub.value) || 0;
+  const rbx = Math.floor(rub * rpr);
+  inpRbx.value = rbx > 0 ? rbx : '';
+  refresh();
+}
+function fromRbx() {
+  const rbx = parseInt(inpRbx.value) || 0;
+  const rub = Math.ceil(rbx / rpr);
+  inpRub.value = rub > 0 ? rub : '';
+  refresh();
+}
+
+function refresh() {
+  const rbx = parseInt(inpRbx.value) || 0;
+  const rub = parseInt(inpRub.value) || 0;
+
+  $('sumRbx').textContent = fmt(rbx) + ' R$';
+  $('sumRate').textContent = '1 ₽ = ' + rpr + ' R$';
+  $('sumTotal').textContent = fmt(rub) + ' ₽';
+
+  const ok = rub >= CONFIG.minRub && rbx > 0;
+  $('buyBtn').disabled = !ok;
+  $('buyBtn').textContent = ok ? `Оформить заказ · ${fmt(rub)} ₽`
+    : (rub > 0 ? `Минимум ${CONFIG.minRub} ₽` : 'Оформить заказ');
+
+  if (tg && tg.initData !== undefined) {
+    if (ok) { tg.MainButton.setText(`ОФОРМИТЬ · ${fmt(rub)} ₽`); tg.MainButton.show(); }
+    else tg.MainButton.hide();
+  }
+  // подсветка активного пакета
+  document.querySelectorAll('.chip').forEach(c =>
+    c.classList.toggle('active', parseInt(c.dataset.r) === rbx));
+}
+
+inpRub.addEventListener('input', fromRub);
+inpRbx.addEventListener('input', fromRbx);
+inpRub.addEventListener('focus', () => $('panelRub').classList.add('focus'));
+inpRub.addEventListener('blur', () => $('panelRub').classList.remove('focus'));
+inpRbx.addEventListener('focus', () => $('panelRbx').classList.add('focus'));
+inpRbx.addEventListener('blur', () => $('panelRbx').classList.remove('focus'));
+
+// ── Свап ──
+$('swapBtn').addEventListener('click', () => {
+  $('swapBtn').classList.toggle('spun');
+  if (tg && tg.HapticFeedback) tg.HapticFeedback.impactOccurred('light');
+  (document.activeElement === inpRub ? inpRbx : inpRub).focus();
+});
+
+// ── Пакеты ──
+function renderPacks() {
+  $('chips').innerHTML = '';
+  CONFIG.packs.forEach(r => {
+    const d = document.createElement('div');
+    d.className = 'chip';
+    d.dataset.r = r;
+    d.innerHTML = `<div class="r">${fmt(r)}</div><div class="p">${fmt(Math.ceil(r / rpr))} ₽</div>`;
+    d.addEventListener('click', () => {
+      inpRbx.value = r; fromRbx();
+      if (tg && tg.HapticFeedback) tg.HapticFeedback.selectionChanged();
+    });
+    $('chips').appendChild(d);
+  });
+}
+renderPacks();
+
+// ── Курс ──
+$('rateChip').addEventListener('click', () => {
+  $('rateInput').value = rpr;
+  $('rateModal').classList.add('show');
+});
+$('rateModal').addEventListener('click', e => {
+  if (e.target === $('rateModal')) $('rateModal').classList.remove('show');
+});
+$('rateSave').addEventListener('click', () => {
+  const v = parseFloat($('rateInput').value);
+  if (v > 0) {
+    rpr = v;
+    $('rateView').textContent = v;
+    renderPacks();
+    if (inpRbx.value) fromRbx(); else refresh();
+  }
+  $('rateModal').classList.remove('show');
+});
+
+// ── Отправка заказа ──
+function sendOrder() {
+  const rbx = parseInt(inpRbx.value) || 0;
+  const rub = parseInt(inpRub.value) || 0;
+  if (rub < CONFIG.minRub || rbx <= 0) return;
+
+  const order = {
+    type: 'robux_order',
+    robux: rbx,
+    rub: rub,
+    rate: rpr,
+    ts: Date.now()
+  };
+
+  if (tg && tg.initData !== undefined && tg.initData !== '') {
+    // Работает, если мини-апп открыт через keyboard-кнопку бота
+    tg.sendData(JSON.stringify(order));
+  } else {
+    // Fallback: копируем текст заказа в буфер
+    const text = `Заказ Robux\n${fmt(rbx)} R$ за ${fmt(rub)} ₽`;
+    navigator.clipboard && navigator.clipboard.writeText(text);
+    const t = $('toast');
+    t.textContent = 'Заказ скопирован в буфер ✓';
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2200);
+  }
+}
+$('buyBtn').addEventListener('click', sendOrder);
+
+refresh();
+</script>
+</body>
+</html>
